@@ -76,3 +76,26 @@ fig.update_layout(title="Infosys Stock Interactive Dashboard",
                   legend=dict(x=0, y=1))
 
 fig.show()
+
+
+import pandas as pd
+import sqlite3
+
+file_path = '/content/infy.csv'
+
+df_raw = pd.read_csv(file_path)
+df = df_raw.iloc[2:].copy()
+df.rename(columns={'Price': 'Date'}, inplace=True)
+
+df['Date'] = pd.to_datetime(df['Date'])
+df.set_index('Date', inplace=True)
+
+for col in ['Close', 'High', 'Low', 'Open', 'Volume']:
+    df[col] = pd.to_numeric(df[col])
+
+print("Cleaned DataFrame head before saving to DB:")
+print(df.head())
+
+conn = sqlite3.connect('stocks.db')
+df.to_sql('stocks', conn, if_exists='replace', index=True)
+conn.close()
