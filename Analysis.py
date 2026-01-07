@@ -1,21 +1,31 @@
-import yfinance as yf                     
-import pandas as pd                     
-import numpy as np                        
-import matplotlib.pyplot as plt           
-import plotly.graph_objects as go         
+import sqlite3
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
-data = yf.download("INFY.NS", start="2020-01-01", end="2025-01-01")
+conn = sqlite3.connect("stock_data.db")
 
-print(data.head())
+query = """
+SELECT Date, Close, High, Low, Open, Volume
+FROM INFY_STOCK
+ORDER BY Date
+"""
 
-#Calculate Moving Averages
-data['20_MA'] = data['Close'].rolling(window=20).mean()   
-data['50_MA'] = data['Close'].rolling(window=50).mean()   
+data = pd.read_sql(query, conn)
+conn.close()
 
-#Generate buy, sell signal
+data['Date'] = pd.to_datetime(data['Date'])
+data.set_index('Date', inplace=True)
+
+data['20_MA'] = data['Close'].rolling(20).mean()
+data['50_MA'] = data['Close'].rolling(50).mean()
+
 data['Signal'] = 0
-data['Signal'][20:] = np.where(data['20_MA'][20:] > data['50_MA'][20:], 1, 0)  #Buy if 20_MA > 50_MA
-data['Position'] = data['Signal'].diff()   
+data.loc[data.index[20:], 'Signal'] = np.where(
+    data['20_MA'][20:] > data['50_MA'][20:], 1, 0
+)
+data['Position'] = data['Signal'].diff()
 
 print(data.tail())
 
@@ -76,5 +86,3 @@ fig.update_layout(title="Infosys Stock Interactive Dashboard",
                   legend=dict(x=0, y=1))
 
 fig.show()
-
-
